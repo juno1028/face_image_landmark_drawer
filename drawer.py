@@ -1,9 +1,11 @@
 from platform import release
 from cv2 import COLOR_BGR2GRAY
-import dlib
 import cv2
 import numpy as np
 from PIL import Image
+import dlib
+import matplotlib.pyplot as plt
+from scipy.interpolate import UnivariateSpline
 
 # creat list for landmarks
 ALL = list(range(0, 68))
@@ -34,9 +36,14 @@ predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
 # ret, image_o = vid_in.read()
 
 # resize the video
-image_o = np.asarray(Image.open("./002.png"))
+# image_o = np.asarray(Image.open("./002.png"))
+image_o = Image.open("./002.png")
+image_o_array = np.array(image_o)
+print(image_o_array.shape)
 
-image = cv2.resize(image_o, dsize=(512, 512), interpolation=cv2.INTER_AREA)
+
+image = cv2.resize(image_o_array, dsize=(
+    512, 512), interpolation=cv2.INTER_AREA)
 # img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Get faces (up-sampling=1)
@@ -50,7 +57,7 @@ print("The number of faces detected : {}".format(len(face_detector)))
 for face in face_detector:
     # face wrapped with rectangle
     cv2.rectangle(image, (face.left(), face.top()),
-                  (face.right(), face.bottom()), (0, 0, 255), 3)
+                  (face.right(), face.bottom()), (0, 0, 255), 1)
 
     # make prediction and transform to numpy array
     landmarks = predictor(image, face)  # 얼굴에서 68개 점 찾기
@@ -59,9 +66,62 @@ for face in face_detector:
     landmark_list = []
 
     # append (x, y) in landmark_list
+    # 얼굴 위 모든 landmark에 점 찍기
     for p in landmarks.parts():
         landmark_list.append([p.x, p.y])
-        cv2.circle(image, (p.x, p.y), 2, (0, 255, 0), -1)
+        # cv2.circle(image, (p.x, p.y), 2, (0, 255, 0), -1)
+
+left_eye_upper_side = landmark_list[36:40]
+right_eye_upper_side = landmark_list[42:46]
+# 왼쪽 눈 위에 점 찍기
+for left_eye_upper_point in left_eye_upper_side:
+    cv2.circle(image, left_eye_upper_point, 2, (255, 255, 255), -1)
+
+# 오른쪽 눈 위에 점 찍기
+for right_eye_upper_point in right_eye_upper_side:
+    cv2.circle(image, right_eye_upper_point, 2, (255, 255, 255), -1)
+
+# 왼쪽 눈
+left_eye_upper_side_x_pts = []
+left_eye_upper_side_y_pts = []
+for [x, y] in left_eye_upper_side:
+    left_eye_upper_side_x_pts.append(x)
+    # 사진에서 y좌표는 반대이므로,
+    left_eye_upper_side_y_pts.append(512-y)
+
+# 왼쪽 눈
+right_eye_upper_side_x_pts = []
+right_eye_upper_side_y_pts = []
+for [x, y] in right_eye_upper_side:
+    right_eye_upper_side_x_pts.append(x)
+    # 사진에서 y좌표는 반대이므로,
+    right_eye_upper_side_y_pts.append(512-y)
+
+# 왼쪽 눈 interpolation 생성
+left_xs = np.linspace(
+    left_eye_upper_side_x_pts[0], left_eye_upper_side_x_pts[-1], 1000)
+left_spl = UnivariateSpline(
+    left_eye_upper_side_x_pts, left_eye_upper_side_y_pts)
+plt.plot(left_xs, left_spl(left_xs), 'g', lw=3)
+# 오른쪽 눈 interpolation 생성
+right_xs = np.linspace(
+    right_eye_upper_side_x_pts[0], right_eye_upper_side_x_pts[-1], 1000)
+right_spl = UnivariateSpline(
+    right_eye_upper_side_x_pts, right_eye_upper_side_y_pts)
+plt.plot(right_xs, right_spl(right_xs), 'g', lw=3)
+# 좌표평면 생성
+plt.axis((0, 512, 0, 512))
+plt.show()
+
+# 왼쪽 눈 위에 쌍커풀 Polyline 생성
+pts = np.array([left_eye_upper_side], np.int32)
+pts = pts.reshape((-1, 1, 2))
+# cv2.polylines(image, [pts], False, (255, 255, 255))
+
+# 오른쪽 눈 위에 쌍커풀 Polyline 생성
+pts = np.array([right_eye_upper_side], np.int32)
+pts = pts.reshape((-1, 1, 2))
+# cv2.polylines(image, [pts], False, (255, 255, 255))
 
 cv2.imshow('result', image)
 
