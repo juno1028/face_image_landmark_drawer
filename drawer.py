@@ -36,7 +36,7 @@ predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
 # ret, image_o = vid_in.read()
 
 # resize the image
-image_o_array = cv2.imread("./sample_image/006.png")
+image_o_array = cv2.imread("./sample_image/005.png")
 # print(image_o_array.shape)
 
 
